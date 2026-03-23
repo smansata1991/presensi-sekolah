@@ -272,18 +272,41 @@
 
   function loadStudentsList() { apiGet('getStudents').then(data => { var h=''; data.forEach((r,i)=>{if(i>0)h+='<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td></tr>'}); document.getElementById('tblSiswa').innerHTML=h; }); }
   
-  function addStudent() {
-    var d = { nisn: document.getElementById('inNISN').value, nama: document.getElementById('inNama').value, kelas: document.getElementById('inKelas').value };
-    apiPost('addStudent', d).then(m => { showToast(m, "success"); loadStudentsList(); });
+    function addStudent() {
+    var d = { 
+      nisn: document.getElementById('inNISN').value, 
+      nama: document.getElementById('inNama').value, 
+      kelas: document.getElementById('inKelas').value 
+    };
+    // Validasi sederhana
+    if(!d.nisn || !d.nama || !d.kelas) {
+        showToast("Isi semua field!", "warning");
+        return;
+    }
+
+    apiPost('addStudent', d).then(m => { 
+      showToast(m, "success"); 
+      // Kosongkan form setelah simpan
+      document.getElementById('inNISN').value = '';
+      document.getElementById('inNama').value = '';
+      document.getElementById('inKelas').value = '';
+      // Refresh daftar siswa
+      loadStudentsList(); 
+    });
   }
 
   function importCSV() {
-    var file = document.getElementById('fileCSV').files[0]; if(!file) return;
+    var file = document.getElementById('fileCSV').files[0]; 
+    if(!file) return;
     var reader = new FileReader();
-    reader.onload = e => { apiPost('importCSV', {csvData: e.target.result}).then(m => { showToast(m, "success"); loadStudentsList(); }); };
+    reader.onload = e => { 
+      apiPost('importCSV', {csvData: e.target.result}).then(m => { 
+        showToast(m, "success"); 
+        loadStudentsList(); 
+      }); 
+    };
     reader.readAsText(file);
   }
-
   function loadKelasList() { apiGet('getKelas').then(list => { var sel = document.getElementById('filterKelas'); sel.innerHTML=''; list.forEach(l=> sel.innerHTML+='<option value="'+l+'">'+l+'</option>'); loadRekap(); }); }
 
   function loadRekap() {
