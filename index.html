@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Presensi Online</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { background-color: #f0f2f5; }
+    .card { border-radius: 15px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .nav-pills .nav-link { color: #444; border-radius: 20px; margin: 0 5px; }
+    .nav-pills .nav-link.active { background-color: #0d6efd; color: white; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+<div class="container py-4">
+  <div class="text-center mb-4">
+    <h3 class="fw-bold text-primary"><i class="bi bi-geo-alt-fill"></i> Presensi Online GPS</h3>
+    <p class="text-muted" id="headerTitle">Sistem Kehadiran Siswa</p>
+  </div>
+
+  <ul class="nav nav-pills justify-content-center mb-4" id="mainTab" role="tablist">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#menuSiswa" type="button">Menu Siswa</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#menuAdmin" type="button">Menu Admin</button></li>
+  </ul>
+
+  <div class="tab-content">
+    <!-- MENU SISWA -->
+    <div class="tab-pane fade show active" id="menuSiswa">
+      <div class="row justify-content-center">
+        <div class="col-lg-5 col-md-8">
+          <div class="card p-4">
+            <div class="mb-3">
+              <label class="form-label fw-bold">Cari NISN / Nama</label>
+              <div class="input-group">
+                <input type="text" id="txtSearch" class="form-control" placeholder="Ketik nama atau NISN..." oninput="searchStudent()">
+                <button class="btn btn-outline-secondary" onclick="searchStudent()"><i class="bi bi-search"></i></button>
+              </div>
+              <div id="searchResults" class="list-group mt-2"></div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold">NISN Terpilih</label>
+              <input type="text" id="txtNISN" class="form-control form-control-lg" readonly placeholder="Pilih dari hasil pencarian">
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold">Status Kehadiran</label>
+              <select id="selectStatus" class="form-select" onchange="handleStatusChange()">
+                <option value="Hadir">Hadir (Wajib di Lokasi)</option>
+                <option value="Sakit">Sakit</option>
+                <option value="Ijin">Ijin</option>
+                <option value="Alpha">Alpha</option>
+              </select>
+            </div>
+            <div id="gpsSection" class="mb-3">
+              <label class="form-label fw-bold">Koordinat Lokasi</label>
+              <button class="btn btn-info w-100 mb-2" onclick="getLocation()"><i class="bi bi-pin-map"></i> Ambil Koordinat</button>
+              <div class="bg-light p-2 rounded small">
+                <span id="lblCoords">Belum ada koordinat</span><br>
+                <span id="lblDistance" class="fw-bold"></span>
+              </div>
+            </div>
+            <button class="btn btn-primary w-100 mt-3 py-2 fw-bold" onclick="submitAbsensi()">KIRIM ABSEN</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MENU ADMIN -->
+    <div class="tab-pane fade" id="menuAdmin">
+      <div id="adminLogin" class="row justify-content-center">
+        <div class="col-md-4">
+          <div class="card p-4 text-center">
+            <h5 class="mb-3">Login Admin</h5>
+            <input type="password" id="txtPassword" class="form-control mb-3" placeholder="Password">
+            <button class="btn btn-success" onclick="adminLogin()">Login</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="adminPanel" class="hidden">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="mb-0">Dashboard Admin</h5>
+          <button class="btn btn-sm btn-outline-danger" onclick="logout()">Logout</button>
+        </div>
+        <div class="row">
+          <div class="col-md-3 mb-3">
+            <div class="list-group">
+              <button class="list-group-item list-group-item-action active" onclick="showAdminMenu('dashboard')">1. Dashboard</button>
+              <button class="list-group-item list-group-item-action" onclick="showAdminMenu('siswa')">2. Input Siswa</button>
+              <button class="list-group-item list-group-item-action" onclick="showAdminMenu('rekap')">3. Rekap Kehadiran</button>
+            </div>
+          </div>
+          <div class="col-md-9">
+            <!-- Dashboard -->
+            <div id="menuDashboard" class="card p-4">
+              <h5>Pengaturan</h5><hr>
+              <div class="row g-3">
+                <div class="col-md-6"><label>Nama Sekolah</label><input type="text" id="setNamaSekolah" class="form-control"></div>
+                <div class="col-md-6"><label>Guru Piket</label><input type="text" id="setGuruPiket" class="form-control"></div>
+                <div class="col-md-6"><label>Tempat</label><input type="text" id="setTempat" class="form-control"></div>
+                <div class="col-md-3"><label>Latitude</label><input type="number" step="any" id="setLat" class="form-control"></div>
+                <div class="col-md-3"><label>Longitude</label><input type="number" step="any" id="setLon" class="form-control"></div>
+                <div class="col-12"><button class="btn btn-primary" onclick="saveSettings()">Simpan</button></div>
+              </div>
+            </div>
+            <!-- Input Siswa -->
+            <div id="menuSiswa" class="card p-4 hidden">
+              <h5>Input Siswa</h5><hr>
+              <div class="row">
+                <div class="col-md-6 border-end">
+                  <input type="text" id="inNISN" class="form-control mb-2" placeholder="NISN">
+                  <input type="text" id="inNama" class="form-control mb-2" placeholder="Nama">
+                  <input type="text" id="inKelas" class="form-control mb-2" placeholder="Kelas">
+                  <button class="btn btn-success w-100 mb-3" onclick="addStudent()">Simpan Manual</button>
+                  <input type="file" id="fileCSV" accept=".csv" class="form-control mb-2">
+                  <button class="btn btn-info w-100" onclick="importCSV()">Upload CSV</button>
+                </div>
+                <div class="col-md-6">
+                  <div class="table-responsive" style="max-height:300px; overflow-y:auto;">
+                    <table class="table table-sm table-striped"><thead><tr><th>NISN</th><th>Nama</th><th>Kelas</th></tr></thead><tbody id="tblSiswa"></tbody></table>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Rekap -->
+            <div id="menuRekap" class="card p-4 hidden">
+              <h5>Rekap</h5><hr>
+              <div class="row mb-3">
+                <div class="col-md-4"><select id="filterKelas" class="form-select" onchange="loadRekap()"></select></div>
+                <div class="col-md-2"><button class="btn btn-danger w-100" onclick="cetakPDF()">Cetak PDF</button></div>
+              </div>
+              <div class="row">
+                <div class="col-md-4"><canvas id="chartDonat"></canvas></div>
+                <div class="col-md-8">
+                  <div class="table-responsive" style="max-height:350px;">
+                    <table class="table table-bordered table-hover"><thead class="table-dark"><tr><th>Waktu</th><th>Nama</th><th>Status</th><th>Ket</th></tr></thead><tbody id="tblRekap"></tbody></table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+  <div id="toast" class="toast align-items-center text-white bg-primary border-0" role="alert">
+    <div class="d-flex"><div class="toast-body" id="toastMsg"></div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  // ================= PENTING =================
+  // GANTI URL INI DENGAN URL DEPLOYMENT ANDA
+  const API_URL = "https://script.google.com/macros/s/AKfycbwD1pFXeq8NtlEYsJSXiTILreGWhsF7XPmh1U7M_vxnwOvhiIqeYMfDyOxsR24ML-vaFw/exec"; 
+  // ===========================================
+
+  var currentLat = 0; var currentLong = 0; var chartDonat = null;
+
+  // Helper Fetch (POST)
+  async function apiPost(op, payload) {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      mode: 'cors',
+      headers: {'Content-Type': 'text/plain'}, // text/plain untuk menghindari preflight CORS di Apps Script
+      body: JSON.stringify({ op: op, payload: payload })
+    });
+    return await res.json();
+  }
+
+  // Helper Fetch (GET)
+  async function apiGet(op, params = {}) {
+    let url = API_URL + "?op=" + op;
+    for(let k in params) url += "&" + k + "=" + encodeURIComponent(params[k]);
+    const res = await fetch(url, {mode: 'cors'});
+    return await res.json();
+  }
+
+  function showToast(msg, type) {
+    var t = document.getElementById('toast');
+    t.className = 'toast align-items-center text-white bg-' + type + ' border-0';
+    document.getElementById('toastMsg').innerText = msg;
+    new bootstrap.Toast(t).show();
+  }
+
+  // --- SISWA LOGIC ---
+  function searchStudent() {
+    var q = document.getElementById('txtSearch').value;
+    if(q.length < 2) return;
+    apiGet('search', {q: q}).then(data => {
+      var html = '';
+      data.forEach(s => { html += '<a href="#" class="list-group-item list-group-item-action" onclick="selectStudent(\''+s.nisn+'\', \''+s.nama+'\')">'+s.nisn+' - '+s.nama+'</a>'; });
+      document.getElementById('searchResults').innerHTML = html;
+    });
+  }
+
+  function selectStudent(nisn, nama) {
+    document.getElementById('txtNISN').value = nisn;
+    document.getElementById('txtSearch').value = nama + " (" + nisn + ")";
+    document.getElementById('searchResults').innerHTML = '';
+  }
+
+  function handleStatusChange() {
+    var s = document.getElementById('selectStatus').value;
+    document.getElementById('gpsSection').classList.toggle('hidden', s !== 'Hadir');
+  }
+
+  function getLocation() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        currentLat = pos.coords.latitude; currentLong = pos.coords.longitude;
+        document.getElementById('lblCoords').innerText = "Lat: " + currentLat.toFixed(5) + ", Long: " + currentLong.toFixed(5);
+        apiGet('getSettings').then(set => {
+           var R = 6371; var dLat = (set.latitude - currentLat) * Math.PI / 180; var dLon = (set.longitude - currentLong) * Math.PI / 180;
+           var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(currentLat * Math.PI / 180) * Math.cos(set.latitude * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+           var d = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) * 1000;
+           document.getElementById('lblDistance').innerText = "Jarak: " + d.toFixed(1) + " meter";
+           document.getElementById('lblDistance').className = d > 90 ? "text-danger fw-bold" : "text-success fw-bold";
+        });
+      }, err => showToast(err.message, "danger"));
+    } else showToast("GPS tidak didukung", "danger");
+  }
+
+  function submitAbsensi() {
+    var nisn = document.getElementById('txtNISN').value;
+    var status = document.getElementById('selectStatus').value;
+    if(!nisn) { showToast("Pilih siswa!", "warning"); return; }
+    
+    var data = { nisn: nisn, status: status, lat: currentLat, long: currentLong };
+    apiPost('submit', data).then(res => {
+      showToast(res.message, res.success ? "success" : "danger");
+      if(res.success) { document.getElementById('txtNISN').value=''; document.getElementById('txtSearch').value=''; currentLat=0; }
+    });
+  }
+
+  // --- ADMIN LOGIC ---
+  function adminLogin() {
+    var p = document.getElementById('txtPassword').value;
+    apiPost('login', {password: p}).then(res => {
+      if(res === true) {
+        document.getElementById('adminLogin').classList.add('hidden');
+        document.getElementById('adminPanel').classList.remove('hidden');
+        loadSettingsAdmin();
+        loadKelasList();
+      } else showToast("Password salah", "danger");
+    });
+  }
+  function logout() { location.reload(); }
+
+  function showAdminMenu(m) {
+    ['menuDashboard', 'menuSiswa', 'menuRekap'].forEach(id => document.getElementById(id).classList.add('hidden'));
+    document.getElementById('menu' + m.charAt(0).toUpperCase() + m.slice(1)).classList.remove('hidden');
+    if(m==='dashboard') loadSettingsAdmin();
+    if(m==='siswa') loadStudentsList();
+    if(m==='rekap') loadRekap();
+  }
+
+  function loadSettingsAdmin() { apiGet('getSettings').then(s => { if(s){ document.getElementById('setNamaSekolah').value=s.namaSekolah; document.getElementById('setGuruPiket').value=s.guruPiket; document.getElementById('setTempat').value=s.tempat; document.getElementById('setLat').value=s.latitude; document.getElementById('setLon').value=s.longitude; }}); }
+  
+  function saveSettings() {
+    var d = { namaSekolah: document.getElementById('setNamaSekolah').value, guruPiket: document.getElementById('setGuruPiket').value, tempat: document.getElementById('setTempat').value, latitude: parseFloat(document.getElementById('setLat').value), longitude: parseFloat(document.getElementById('setLon').value) };
+    apiPost('saveSettings', d).then(m => showToast(m, "success"));
+  }
+
+  function loadStudentsList() { apiGet('getStudents').then(data => { var h=''; data.forEach((r,i)=>{if(i>0)h+='<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td></tr>'}); document.getElementById('tblSiswa').innerHTML=h; }); }
+  
+  function addStudent() {
+    var d = { nisn: document.getElementById('inNISN').value, nama: document.getElementById('inNama').value, kelas: document.getElementById('inKelas').value };
+    apiPost('addStudent', d).then(m => { showToast(m, "success"); loadStudentsList(); });
+  }
+
+  function importCSV() {
+    var file = document.getElementById('fileCSV').files[0]; if(!file) return;
+    var reader = new FileReader();
+    reader.onload = e => { apiPost('importCSV', {csvData: e.target.result}).then(m => { showToast(m, "success"); loadStudentsList(); }); };
+    reader.readAsText(file);
+  }
+
+  function loadKelasList() { apiGet('getKelas').then(list => { var sel = document.getElementById('filterKelas'); sel.innerHTML=''; list.forEach(l=> sel.innerHTML+='<option value="'+l+'">'+l+'</option>'); loadRekap(); }); }
+
+  function loadRekap() {
+    var kelas = document.getElementById('filterKelas').value;
+    apiGet('getRekap', {kelas: kelas}).then(data => {
+      var h = '';
+      data.table.forEach(r => { h += '<tr><td>'+r[1]+'</td><td>'+r[3]+'</td><td>'+r[5]+'</td><td>'+r[6]+'</td></tr>'; });
+      document.getElementById('tblRekap').innerHTML = h;
+      var ctx = document.getElementById('chartDonat').getContext('2d');
+      if(chartDonat) chartDonat.destroy();
+      chartDonat = new Chart(ctx, { type: 'doughnut', data: { labels: ['Hadir', 'Sakit', 'Ijin', 'Alpha'], datasets: [{ data: [data.stats.Hadir, data.stats.Sakit, data.stats.Ijin, data.stats.Alpha], backgroundColor: ['#198754', '#0dcaf0', '#ffc107', '#dc3545'] }] } });
+    });
+  }
+
+  function cetakPDF() {
+    var kelas = document.getElementById('filterKelas').value;
+    showToast("Membuat PDF...", "info");
+    apiPost('generatePDF', {kelas: kelas}).then(url => { window.open(url, '_blank'); });
+  }
+</script>
+</body>
+</html>
